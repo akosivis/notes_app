@@ -1,4 +1,6 @@
+import 'package:awesome_dialog/awesome_dialog.dart';
 import 'package:flutter/material.dart';
+import 'package:notes_app/database/notes_db_helper.dart';
 import 'package:notes_app/model/NoteModel.dart';
 
 void main() {
@@ -39,7 +41,19 @@ class NotesApp extends StatefulWidget {
 }
 
 class _NotesAppState extends State<NotesApp> {
+
+  final dbHelper = DbHelper.instance;
+  final _inputNoteKey = GlobalKey<FormState>();
+  final TextEditingController _noteTitleController = TextEditingController();
+  final TextEditingController _noteBodyController = TextEditingController();
   List<Note> noteList = [];
+
+  @override
+  void initState() {
+    // TODO: implement initState
+    fetchInitialNotes();
+    super.initState();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -59,7 +73,7 @@ class _NotesAppState extends State<NotesApp> {
                     label: Text("Add a new item"),
                     onPressed: () {
                       // add a new note here
-                      // _showNoteDialog();
+                      _showNoteDialog();
                     },
                   ),
                 ),
@@ -77,12 +91,137 @@ class _NotesAppState extends State<NotesApp> {
                 child: noteList.isEmpty
                     ? Center(child: Text("You have no notes!"))
                     : ListView.builder(
+                        padding: const EdgeInsets.all(8),
                         itemCount: noteList.length,
-                        itemBuilder: (context, index) =>
-                            Text(noteList[index].title)))
+                        itemBuilder: (context, index) => createNoteDisplay(noteList[index])))
           ],
         ),
       ),
+    );
+  }
+
+  void _showNoteDialog() {
+    AwesomeDialog(
+        context: context,
+        animType: AnimType.SCALE,
+        dialogType: DialogType.NO_HEADER,
+        body: Center(
+          child: Form(
+            key: _inputNoteKey,
+            child: Column(
+              children: <Widget>[
+                // TextFormField for note's title
+                TextFormField(
+                  controller: _noteTitleController,
+                  decoration: new InputDecoration(
+                      hintStyle: new TextStyle(
+                          color: Colors.grey,
+                          fontSize: 14.0,
+                          fontStyle: FontStyle.italic),
+                      hintText: "Title",
+                      fillColor: Colors.white),
+                  validator: (value) {
+                    if (value.isEmpty) {
+                      return "Please enter some text for the note's title";
+                    }
+
+                    return null;
+                  },
+                ),
+
+                // TextFormField for note's content
+                TextFormField(
+                  controller: _noteBodyController,
+                  decoration: new InputDecoration(
+                      hintStyle: new TextStyle(
+                          color: Colors.grey,
+                          fontSize: 14.0,
+                          fontStyle: FontStyle.italic),
+                      hintText: "Enter note's content here",
+                      fillColor: Colors.white),
+                  validator: (value) {
+                    if (value.isEmpty) {
+                      return "Please enter some text for the note's content";
+                    }
+
+                    return null;
+                  },
+                ),
+
+                // Button to enter the note!
+                ElevatedButton(
+                  onPressed: () {
+                    if (_inputNoteKey.currentState.validate()) {
+                      // save the note
+                      String title = _noteTitleController.text;
+                      String content = _noteBodyController.text;
+
+                      insertNote(title, content);
+                      // close the dialog here
+
+                    }
+                  },
+                  child: Text('Save note'),
+                )
+              ],
+            ),
+          ),
+        ),
+        title: 'This is Ignored',
+        desc: 'This is also Ignored')
+      ..show().then((value) {
+        _noteBodyController.clear();
+        _noteTitleController.clear();
+      });
+  }
+
+  Future<void> insertNote(String title, String content) async {
+    final noteModel = Note(title: title, content: content);
+
+    // insert the note in the database here
+    final id = await dbHelper.insert(noteModel);
+    print('inserted row id: $id');
+
+    if (id > 0) {
+      // successfully inserted
+      // refresh the list here
+      noteList = await dbHelper.getAllNotes();
+      setState(() {});
+
+    }
+
+  }
+
+  Future<void> fetchInitialNotes() async {
+    noteList = await dbHelper.getAllNotes();
+  }
+
+  createNoteDisplay(Note noteList) {
+    return Container(
+      child: Card(
+        child: Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(noteList.title,
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16
+                  ),
+                ),
+                Text(noteList.content,
+                  style: TextStyle(
+                    fontWeight: FontWeight.normal,
+                    fontSize: 14
+                  ),
+                )
+              ],
+            ),
+          ),
+        ),
+      )
     );
   }
 }
