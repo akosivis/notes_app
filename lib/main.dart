@@ -41,18 +41,18 @@ class NotesApp extends StatefulWidget {
 }
 
 class _NotesAppState extends State<NotesApp> {
-
   final dbHelper = DbHelper.instance;
   final _inputNoteKey = GlobalKey<FormState>();
   final TextEditingController _noteTitleController = TextEditingController();
   final TextEditingController _noteBodyController = TextEditingController();
   List<Note> noteList = [];
+  bool _isLoading = false;
 
   @override
   void initState() {
     // TODO: implement initState
-    fetchInitialNotes();
     super.initState();
+    fetchInitialNotes();
   }
 
   @override
@@ -81,19 +81,25 @@ class _NotesAppState extends State<NotesApp> {
                   child: ElevatedButton.icon(
                     icon: Icon(Icons.refresh),
                     label: Text("Refresh list"),
-                    onPressed: () {},
+                    onPressed: () async {
+                      noteList = await dbHelper.getAllNotes();
+                      setState(() {});
+                    },
                   ),
                 ),
               ],
             ),
             // for the ListView
             Expanded(
-                child: noteList.isEmpty
-                    ? Center(child: Text("You have no notes!"))
-                    : ListView.builder(
-                        padding: const EdgeInsets.all(8),
-                        itemCount: noteList.length,
-                        itemBuilder: (context, index) => createNoteDisplay(noteList[index])))
+                child: _isLoading
+                    ? (Center(child: Text("Notes are being loaded...")))
+                    : (noteList.isEmpty
+                        ? Center(child: Text("You have no notes!"))
+                        : ListView.builder(
+                            padding: const EdgeInsets.all(8),
+                            itemCount: noteList.length,
+                            itemBuilder: (context, index) =>
+                                createNoteDisplay(noteList[index]))))
           ],
         ),
       ),
@@ -105,65 +111,69 @@ class _NotesAppState extends State<NotesApp> {
         context: context,
         animType: AnimType.SCALE,
         dialogType: DialogType.NO_HEADER,
-        body: Center(
-          child: Form(
-            key: _inputNoteKey,
-            child: Column(
-              children: <Widget>[
-                // TextFormField for note's title
-                TextFormField(
-                  controller: _noteTitleController,
-                  decoration: new InputDecoration(
-                      hintStyle: new TextStyle(
-                          color: Colors.grey,
-                          fontSize: 14.0,
-                          fontStyle: FontStyle.italic),
-                      hintText: "Title",
-                      fillColor: Colors.white),
-                  validator: (value) {
-                    if (value.isEmpty) {
-                      return "Please enter some text for the note's title";
-                    }
+        body: Padding(
+          padding: EdgeInsets.all(8.0),
+          child: Center(
+            child: Form(
+              key: _inputNoteKey,
+              child: Column(
+                children: <Widget>[
+                  // TextFormField for note's title
+                  TextFormField(
+                    controller: _noteTitleController,
+                    decoration: new InputDecoration(
+                        hintStyle: new TextStyle(
+                            color: Colors.grey,
+                            fontSize: 14.0,
+                            fontStyle: FontStyle.italic),
+                        hintText: "Title",
+                        fillColor: Colors.white),
+                    validator: (value) {
+                      if (value.isEmpty) {
+                        return "Please enter some text for the note's title";
+                      }
 
-                    return null;
-                  },
-                ),
+                      return null;
+                    },
+                  ),
 
-                // TextFormField for note's content
-                TextFormField(
-                  controller: _noteBodyController,
-                  decoration: new InputDecoration(
-                      hintStyle: new TextStyle(
-                          color: Colors.grey,
-                          fontSize: 14.0,
-                          fontStyle: FontStyle.italic),
-                      hintText: "Enter note's content here",
-                      fillColor: Colors.white),
-                  validator: (value) {
-                    if (value.isEmpty) {
-                      return "Please enter some text for the note's content";
-                    }
+                  // TextFormField for note's content
+                  TextFormField(
+                    controller: _noteBodyController,
+                    decoration: new InputDecoration(
+                        hintStyle: new TextStyle(
+                            color: Colors.grey,
+                            fontSize: 14.0,
+                            fontStyle: FontStyle.italic),
+                        hintText: "Enter note's content here",
+                        fillColor: Colors.white),
+                    validator: (value) {
+                      if (value.isEmpty) {
+                        return "Please enter some text for the note's content";
+                      }
 
-                    return null;
-                  },
-                ),
+                      return null;
+                    },
+                  ),
 
-                // Button to enter the note!
-                ElevatedButton(
-                  onPressed: () {
-                    if (_inputNoteKey.currentState.validate()) {
-                      // save the note
-                      String title = _noteTitleController.text;
-                      String content = _noteBodyController.text;
+                  // Button to enter the note!
+                  ElevatedButton(
+                    onPressed: () {
+                      if (_inputNoteKey.currentState.validate()) {
+                        // save the note
+                        String title = _noteTitleController.text;
+                        String content = _noteBodyController.text;
 
-                      insertNote(title, content);
-                      // close the dialog here
-
-                    }
-                  },
-                  child: Text('Save note'),
-                )
-              ],
+                        insertNote(title, content);
+                        // close the dialog here
+                        _noteBodyController.clear();
+                        _noteTitleController.clear();
+                      }
+                    },
+                    child: Text('Save note'),
+                  )
+                ],
+              ),
             ),
           ),
         ),
@@ -172,6 +182,7 @@ class _NotesAppState extends State<NotesApp> {
       ..show().then((value) {
         _noteBodyController.clear();
         _noteTitleController.clear();
+        
       });
   }
 
@@ -187,41 +198,45 @@ class _NotesAppState extends State<NotesApp> {
       // refresh the list here
       noteList = await dbHelper.getAllNotes();
       setState(() {});
-
     }
-
   }
 
-  Future<void> fetchInitialNotes() async {
-    noteList = await dbHelper.getAllNotes();
+  void fetchInitialNotes() async {
+    // method here
+    setState(() {
+      _isLoading = true;
+    });
+    _fetchInitialNotesAsync();
   }
 
   createNoteDisplay(Note noteList) {
     return Container(
-      child: Card(
-        child: Padding(
-          padding: const EdgeInsets.all(8.0),
-          child: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                Text(noteList.title,
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16
-                  ),
-                ),
-                Text(noteList.content,
-                  style: TextStyle(
-                    fontWeight: FontWeight.normal,
-                    fontSize: 14
-                  ),
-                )
-              ],
-            ),
+        child: Card(
+      child: Padding(
+        padding: const EdgeInsets.all(8.0),
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              Text(
+                noteList.title,
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              ),
+              Text(
+                noteList.content,
+                style: TextStyle(fontWeight: FontWeight.normal, fontSize: 14),
+              )
+            ],
           ),
         ),
-      )
-    );
+      ),
+    ));
+  }
+
+  void _fetchInitialNotesAsync() async {
+    noteList = await dbHelper.getAllNotes();
+    setState(() {
+      _isLoading = false;
+    });
   }
 }
