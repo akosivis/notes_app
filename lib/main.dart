@@ -65,8 +65,9 @@ class _NotesAppState extends State<NotesApp> {
         child: Column(
           children: <Widget>[
             // for the two buttons
-            Row(
-              children: [
+            Row (
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: <Widget>[
                 Expanded(
                   child: ElevatedButton.icon(
                     icon: Icon(Icons.add),
@@ -74,6 +75,7 @@ class _NotesAppState extends State<NotesApp> {
                     onPressed: () {
                       // add a new note here
                       _showNoteDialog();
+                      // showCustomDialog();
                     },
                   ),
                 ),
@@ -168,6 +170,8 @@ class _NotesAppState extends State<NotesApp> {
                         // close the dialog here
                         _noteBodyController.clear();
                         _noteTitleController.clear();
+
+                        Navigator.of(context).pop();
                       }
                     },
                     child: Text('Save note'),
@@ -182,7 +186,6 @@ class _NotesAppState extends State<NotesApp> {
       ..show().then((value) {
         _noteBodyController.clear();
         _noteTitleController.clear();
-        
       });
   }
 
@@ -215,17 +218,34 @@ class _NotesAppState extends State<NotesApp> {
       child: Padding(
         padding: const EdgeInsets.all(8.0),
         child: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              Text(
-                noteList.title,
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Text(
+                      noteList.title,
+                      style:
+                          TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                    ),
+                    Text(
+                      noteList.content,
+                      style: TextStyle(
+                          fontWeight: FontWeight.normal, fontSize: 14),
+                    )
+                  ],
+                ),
               ),
-              Text(
-                noteList.content,
-                style: TextStyle(fontWeight: FontWeight.normal, fontSize: 14),
-              )
+              // widget for delete
+              IconButton(
+                  icon: Icon(
+                    Icons.delete,
+                    color: Colors.blue,
+                  ),
+                  onPressed: () {}),
             ],
           ),
         ),
